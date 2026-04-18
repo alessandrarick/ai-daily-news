@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试看板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: #fff;
+            padding: 20px 0;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .stat-card.total .stat-number { color: #2196f3; }
+        .stat-card.passed .stat-number { color: #4caf50; }
+        .stat-card.failed .stat-number { color: #f44336; }
+        .stat-card.pending .stat-number { color: #9e9e9e; }
+        .stat-card.blocked .stat-number { color: #ff9800; }
+
+        .chart-section {
+            background: #fff;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .chart-container {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .donut-chart {
+            position: relative;
+            width: 160px;
+            height: 160px;
+        }
+
+        .donut-chart svg {
+            transform: rotate(-90deg);
+        }
+
+        .donut-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .donut-center .percent {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .donut-center .label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        .progress-section {
+            background: #fff;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-tab {
+            padding: 8px 16px;
+            border: 1px solid #e0e0e0;
+            background: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .filter-tab:hover {
+            background: #f5f5f5;
+        }
+
+        .filter-tab.active {
+            background: #2196f3;
+            color: #fff;
+            border-color: #2196f3;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #2196f3;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #1976d2;
+        }
+
+        .table-container {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: #fafafa;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-passed { background: #e8f5e9; color: #2e7d32; }
+        .status-failed { background: #ffebee; color: #c62828; }
+        .status-pending { background: #f5f5f5; color: #616161; }
+        .status-blocked { background: #fff3e0; color: #e65100; }
+
+        .priority-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .priority-high { background: #ffebee; color: #c62828; }
+        .priority-medium { background: #fff8e1; color: #f57f17; }
+        .priority-low { background: #e3f2fd; color: #1565c0; }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            padding: 6px 12px;
+            border: 1px solid #e0e0e0;
+            background: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: #f5f5f5;
+        }
+
+        .btn-icon.delete:hover {
+            background: #ffebee;
+            border-color: #f44336;
+            color: #f44336;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #fff;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 480px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .modal-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #2196f3;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px;
+            }
+
+            .stats-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .chart-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-tabs {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+            }
+
+            th, td {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>测试看板</h1>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Stats Cards -->
+        <div class="stats-cards">
+            <div class="stat-card total">
+                <h3>总用例</h3>
+                <div class="stat-number" id="totalCount">0</div>
+            </div>
+            <div class="stat-card passed">
+                <h3>通过</h3>
+                <div class="stat-number" id="passedCount">0</div>
+            </div>
+            <div class="stat-card failed">
+                <h3>失败</h3>
+                <div class="stat-number" id="failedCount">0</div>
+            </div>
+            <div class="stat-card pending">
+                <h3>待执行</h3>
+                <div class="stat-number" id="pendingCount">0</div>
+            </div>
+            <div class="stat-card blocked">
+                <h3>阻塞</h3>
+                <div class="stat-number" id="blockedCount">0</div>
+            </div>
+        </div>
+
+        <!-- Chart Section -->
+        <div class="chart-section">
+            <div class="chart-container">
+                <div class="donut-chart">
+                    <svg width="160" height="160" viewBox="0 0 160 160">
+                        <circle cx="80" cy="80" r="70" fill="none" stroke="#e0e0e0" stroke-width="16"/>
+                        <circle id="chartCircle1" cx="80" cy="80" r="70" fill="none" stroke="#4caf50" stroke-width="16" 
+                                stroke-dasharray="0 440" stroke-linecap="round"/>
+                        <circle id="chartCircle2" cx="80" cy="80" r="70" fill="none" stroke="#f44336" stroke-width="16" 
+                                stroke-dasharray="0 440" stroke-dashoffset="0" stroke-linecap="round"/>
+                        <circle id="chartCircle3" cx="80" cy="80" r="70" fill="none" stroke="#9e9e9e" stroke-width="16" 
+                                stroke-dasharray="0 440" stroke-dashoffset="0" stroke-linecap="round"/>
+                        <circle id="chartCircle4" cx="80" cy="80" r="70" fill="none" stroke="#ff9800" stroke-width="16" 
+                                stroke-dasharray="0 440" stroke-dashoffset="0" stroke-linecap="round"/>
+                    </svg>
+                    <div class="donut-center">
+                        <div class="percent" id="passRate">0%</div>
+                        <div class="label">通过率</div>
+                    </div>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #4caf50;"></div>
+                        <span>通过</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #f44336;"></div>
+                        <span>失败</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #9e9e9e;"></div>
+                        <span>待执行</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #ff9800;"></div>
+                        <span>阻塞</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Section -->
+        <div class="progress-section">
+            <div class="progress-header">
+                <span>整体执行进度</span>
+                <span id="progressText">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="filter-tabs">
+                <button class="filter-tab active" data-filter="all">全部</button>
+                <button class="filter-tab" data-filter="passed">通过</button>
+                <button class="filter-tab" data-filter="failed">失败</button>
+                <button class="filter-tab" data-filter="pending">待执行</button>
+                <button class="filter-tab" data-filter="blocked">阻塞</button>
+            </div>
+            <button class="btn btn-primary" onclick="openModal()">+ 添加用例</button>
+        </div>
+
+        <!-- Table -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>编号</th>
+                        <th>标题</th>
+                        <th>优先级</th>
+                        <th>状态</th>
+                        <th>负责人</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="testCaseTable">
+                    <!-- Dynamic content -->
+                </tbody>
+            </table>
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <path d="M9 12l2 2 4-4"/>
+                </svg>
+                <p>暂无测试用例，点击"添加用例"开始</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">添加用例</h2>
+            </div>
+            <div class="modal-body">
+                <form id="testCaseForm">
+                    <input type="hidden" id="caseId">
+                    <div class="form-group">
+                        <label for="title">标题</label>
+                        <input type="text" id="title" required placeholder="输入测试用例标题">
+                    </div>
+                    <div class="form-group">
+                        <label for="priority">优先级</label>
+                        <select id="priority" required>
+                            <option value="high">高</option>
+                            <option value="medium" selected>中</option>
+                            <option value="low">低</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="status">状态</label>
+                        <select id="status" required>
+                            <option value="pending" selected>待执行</option>
+                            <option value="passed">通过</option>
+                            <option value="failed">失败</option>
+                            <option value="blocked">阻塞</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="assignee">负责人</label>
+                        <input type="text" id="assignee" required placeholder="输入负责人姓名">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveCase()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data Management
+        const STORAGE_KEY = 'testCases';
+        let testCases = [];
+        let currentFilter = 'all';
+        let editingId = null;
+
+        // Load data from localStorage
+        function loadData() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                testCases = JSON.parse(data);
+            } else {
+                // Default sample data
+                testCases = [
+                    { id: 1, title: '用户登录功能测试', priority: 'high', status: 'passed', assignee: '张三' },
+                    { id: 2, title: '商品搜索功能测试', priority: 'medium', status: 'pending', assignee: '李四' },
+                    { id: 3, title: '订单支付流程测试', priority: 'high', status: 'blocked', assignee: '王五' },
+                    { id: 4, title: '购物车功能测试', priority: 'low', status: 'failed', assignee: '赵六' }
+                ];
+                saveData();
+            }
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(testCases));
+        }
+
+        // Get next ID
+        function getNextId() {
+            return testCases.length > 0 ? Math.max(...testCases.map(c => c.id)) + 1 : 1;
+        }
+
+        // Update statistics
+        function updateStats() {
+            const total = testCases.length;
+            const passed = testCases.filter(c => c.status === 'passed').length;
+            const failed = testCases.filter(c => c.status === 'failed').length;
+            const pending = testCases.filter(c => c.status === 'pending').length;
+            const blocked = testCases.filter(c => c.status === 'blocked').length;
+
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('passedCount').textContent = passed;
+            document.getElementById('failedCount').textContent = failed;
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('blockedCount').textContent = blocked;
+
+            // Update chart
+            const circumference = 440; // 2 * PI * 70
+            let offset = 0;
+
+            if (total > 0) {
+                const passedDash = (passed / total) * circumference;
+                const failedDash = (failed / total) * circumference;
+                const pendingDash = (pending / total) * circumference;
+                const blockedDash = (blocked / total) * circumference;
+
+                document.getElementById('chartCircle1').style.strokeDasharray = `${passedDash} ${circumference}`;
+                document.getElementById('chartCircle1').style.strokeDashoffset = 0;
+
+                offset = -passedDash;
+                document.getElementById('chartCircle2').style.strokeDasharray = `${failedDash} ${circumference}`;
+                document.getElementById('chartCircle2').style.strokeDashoffset = offset;
+
+                offset -= failedDash;
+                document.getElementById('chartCircle3').style.strokeDasharray = `${pendingDash} ${circumference}`;
+                document.getElementById('chartCircle3').style.strokeDashoffset = offset;
+
+                offset -= pendingDash;
+                document.getElementById('chartCircle4').style.strokeDasharray = `${blockedDash} ${circumference}`;
+                document.getElementById('chartCircle4').style.strokeDashoffset = offset;
+
+                const passRate = Math.round((passed / total) * 100);
+                document.getElementById('passRate').textContent = `${passRate}%`;
+            } else {
+                document.getElementById('chartCircle1').style.strokeDasharray = `0 ${circumference}`;
+                document.getElementById('chartCircle2').style.strokeDasharray = `0 ${circumference}`;
+                document.getElementById('chartCircle3').style.strokeDasharray = `0 ${circumference}`;
+                document.getElementById('chartCircle4').style.strokeDasharray = `0 ${circumference}`;
+                document.getElementById('passRate').textContent = '0%';
+            }
+
+            // Update progress bar
+            const executed = passed + failed + blocked;
+            const progress = total > 0 ? Math.round((executed / total) * 100) : 0;
+            document.getElementById('progressText').textContent = `${progress}%`;
+            document.getElementById('progressFill').style.width = `${progress}%`;
+        }
+
+        // Render table
+        function renderTable() {
+            const tbody = document.getElementById('testCaseTable');
+            const emptyState = document.getElementById('emptyState');
+            
+            let filtered = testCases;
+            if (currentFilter !== 'all') {
+                filtered = testCases.filter(c => c.status === currentFilter);
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            tbody.innerHTML = filtered.map(tc => `
+                <tr>
+                    <td>#${tc.id.toString().padStart(3, '0')}</td>
+                    <td>${escapeHtml(tc.title)}</td>
+                    <td><span class="priority-badge priority-${tc.priority}">${getPriorityLabel(tc.priority)}</span></td>
+                    <td><span class="status-badge status-${tc.status}">${getStatusLabel(tc.status)}</span></td>
+                    <td>${escapeHtml(tc.assignee)}</td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn-icon" onclick="editCase(${tc.id})">编辑</button>
+                            <button class="btn-icon delete" onclick="deleteCase(${tc.id})">删除</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Helper functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function getPriorityLabel(priority) {
+            const labels = { high: '高', medium: '中', low: '低' };
+            return labels[priority] || priority;
+        }
+
+        function getStatusLabel(status) {
+            const labels = { passed: '通过', failed: '失败', pending: '待执行', blocked: '阻塞' };
+            return labels[status] || status;
+        }
+
+        // Modal functions
+        function openModal(id = null) {
+            editingId = id;
+            document.getElementById('modalTitle').textContent = id ? '编辑用例' : '添加用例';
+            
+            if (id) {
+                const tc = testCases.find(c => c.id === id);
+                if (tc) {
+                    document.getElementById('caseId').value = tc.id;
+                    document.getElementById('title').value = tc.title;
+                    document.getElementById('priority').value = tc.priority;
+                    document.getElementById('status').value = tc.status;
+                    document.getElementById('assignee').value = tc.assignee;
+                }
+            } else {
+                document.getElementById('testCaseForm').reset();
+                document.getElementById('caseId').value = '';
+            }
+            
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+            editingId = null;
+        }
+
+        function saveCase() {
+            const title = document.getElementById('title').value.trim();
+            const priority = document.getElementById('priority').value;
+            const status = document.getElementById('status').value;
+            const assignee = document.getElementById('assignee').value.trim();
+
+            if (!title || !assignee) {
+                alert('请填写完整信息');
+                return;
+            }
+
+            if (editingId) {
+                const index = testCases.findIndex(c => c.id === editingId);
+                if (index !== -1) {
+                    testCases[index] = { ...testCases[index], title, priority, status, assignee };
+                }
+            } else {
+                testCases.push({
+                    id: getNextId(),
+                    title,
+                    priority,
+                    status,
+                    assignee
+                });
+            }
+
+            saveData();
+            updateStats();
+            renderTable();
+            closeModal();
+        }
+
+        function editCase(id) {
+            openModal(id);
+        }
+
+        function deleteCase(id) {
+            if (confirm('确定要删除这个测试用例吗？')) {
+                testCases = testCases.filter(c => c.id !== id);
+                saveData();
+                updateStats();
+                renderTable();
+            }
+        }
+
+        // Filter tabs
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentFilter = tab.dataset.filter;
+                renderTable();
+            });
+        });
+
+        // Close modal on overlay click
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target.id === 'modal') {
+                closeModal();
+            }
+        });
+
+        // Initialize
+        loadData();
+        updateStats();
+        renderTable();
+    </script>
+</body>
+</html>
